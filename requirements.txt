@@ -1,0 +1,6 @@
+flask
+gensim
+numpy
+sklearn
+gunicorn
+git-lfs
