@@ -2,6 +2,8 @@ import zstandard as zstd
 import io
 import json
 import requests
+from abc import ABC, abstractmethod
+
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
     'Accept': '*/*',
@@ -24,7 +26,7 @@ def get_score(word):
     response = requests.post(url, headers=headers, data=data)
 
     # Print response
-    print(response.status_code)
+    print(url,response.status_code)
     if response.status_code == 200:
         dctx = zstd.ZstdDecompressor()
         with io.BytesIO(response.content) as compressed:
@@ -36,3 +38,25 @@ def get_score(word):
     else:
         print("error",response.status_code)
         return "error"
+    
+class ScoreStrategy(ABC):
+    @abstractmethod
+    def get_score(self, word: str):
+        pass
+
+# Concrete implementation for external API
+class ExternalAPIStrategy(ScoreStrategy):
+    def __init__(self, api_url=None):  # You might need other params
+        self.api_url = api_url
+    
+    def get_score(self, word: str):
+        # Your existing external API call implementation
+        return get_score(word)
+
+# Concrete implementation for local game
+class LocalGameStrategy(ScoreStrategy):
+    def __init__(self, game):
+        self.game = game
+    
+    def get_score(self, word: str):
+        return self.game.get_score(word)

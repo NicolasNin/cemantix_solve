@@ -1,17 +1,13 @@
 # app.py
 from flask import Flask
 from routes import main
-from models import get_model
-
-model = None
+from solver import Solver
+from solver import Game
 
 def create_app():
     app = Flask(__name__)
-    
-    with app.app_context():
-        global model
-        model = get_model()
-    
+    app.config['SOLVER'] = Solver()
+    app.config['GAME'] = Game(app.config['SOLVER'].model)
     app.register_blueprint(main)
     return app
 

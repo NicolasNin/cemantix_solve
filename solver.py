@@ -16,22 +16,74 @@ def get_possible_words_from_score(model,word,score,epsilon=0):
         c = cosine_one_vs_all(model, word)
         return [model.index_to_key[x] for x in np.where(np.abs(c-score)<=epsilon)[1]]
 
-def random_word(model):
-    N = len(model.key_to_index)
+def random_word(model,max_N=-1):
+    if max_N==-1:
+        N = len(model.key_to_index)
+    else:
+        N=max_N
     return model.index_to_key[random.randint(0,N)]
 
+
+
+class Game:
+    def __init__(self,model,difficulty="medium"):
+        self.model = model
+        self.current_word = None
+        self.top_similar = {}
+        self.difficulty = difficulty
+        self.N_max = None
+        self.set_difficulty(difficulty)
+        self.init_random_word()
+
+    def set_difficulty(self,difficulty):
+        difficulty_dict = {"easy":1000,"medium":5000,"hard":10000,"very_hard":-1}
+        if difficulty in difficulty_dict:
+            self.difficulty = difficulty
+            self.N_max = difficulty_dict[difficulty]
+            self.init_random_word()  
+
+    def init_random_word(self):
+        self.current_word = random_word(self.model,max_N=self.N_max)
+        top_similar = self.model.most_similar(self.current_word,topn=999)
+        for i,(word,score) in enumerate(top_similar):
+            self.top_similar[word]=(1000-i-1,round(score,4))
+        return  self.current_word
+    def get_score(self,word):
+        if word == self.current_word:
+            return {"score":1,"percentile":1000}
+        if word in self.model.key_to_index:
+            if word in self.top_similar:
+                percentile,score = self.top_similar[word]
+                return {"score":round(score,4),"percentile":percentile}
+            return {"score":round(self.model.similarity(word,self.current_word),4)}
+        else:
+            return {'error': 'Je ne connais pas le mot <i>'+word+'</i>.'}
 class Solver:
-    def __init__(self,language="fr"):
+    def __init__(self,language="fr",score_strategy=None):
         self.model = get_model(language)
         self.word_scores = {}
         self.possible = list(self.model.key_to_index)
         self.first_word_method = "random"
-
+        self.api = "fr"
+        self.score_strategy = score_strategy or ExternalAPIStrategy()
+    
+    def reset(self):
+        self.word_scores = {}
+        self.possible = list(self.model.key_to_index)
+    def get_score(self,word):
+        return self.score_strategy.get_score(word)
+    def set_score_strategy(self, strategy: ScoreStrategy):
+        """Allow switching strategies at runtime"""
+        print("switching strategy",strategy)
+        self.score_strategy = strategy
+        self.reset()
     def get_starting_word(self):
         if self.first_word_method == "random":
             return random_word(self.model)
         return 'spécifique'
-    
+    def get_random_word(self):
+        return random_word(self.model,max_N=2000)
+
     def get_possible_words_from_score(self,word,score,epsilon=0):
         return get_possible_words_from_score(self.model,word,score,epsilon=epsilon)
     
@@ -67,27 +119,18 @@ class Solver:
     def check_word(self,word):
         return word in self.model.key_to_index
     
-    def send_word(self,word,force=False):
-        if word not in self.word_scores:
-            if self.check_word(word) or force:
-                score = get_score(word)
-                if score != "error":
-                    self.word_scores[word] = score
-                    return score
-            else:
-                print(f"{word} not in model")
-
-    def find_close_words(self, word,target_sim, epsilon=0.0001):
-        results = []
-        for w in self.model.key_to_index:
-            if w == word:
-                continue
-            sim = self.model.similarity(word, w)
-            if abs(sim - target_sim) <= epsilon:
-                results.append((w, sim))
-        
-        # Sort by how close they are to target similarity
-        return sorted(results, key=lambda x: abs(x[1] - target_sim))
+    def send_word(self,word):
+        if word in self.word_scores:
+            return self.word_scores[word]
+        if self.check_word(word) :
+            score = self.get_score(word)
+            print("azeaz",score)
+            if score != "error":
+                self.word_scores[word] = score
+                return score
+        else:
+            print(f"{word} not in model")
+            return {"error":"word not in model"}
 
 if __name__ == "__main__":
     solver = Solver()

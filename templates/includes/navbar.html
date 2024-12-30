@@ -1,0 +1,38 @@
+<!-- templates/includes/navbar.html -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="/">Word Analysis</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse justify-content-between" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.local' %}active{% endif %}" href="/local">Local</a>                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'main.link2' %}active{% endif %}" href="/link2">Link 2</a>
+                </li>
+            </ul>
+            <div class="nav-item d-flex align-items-center">
+                <button id="newGameBtn" 
+                class="btn btn-sm btn-light me-3" 
+                style="display: {% if strategy == 'local' %}inline-block{% else %}none{% endif %}">
+                New Game
+                </button>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-light strategy-btn {% if strategy == 'external' %}active{% endif %}" 
+                            data-strategy="external">
+                        External API
+                    </button>
+                    <button class="btn btn-outline-light strategy-btn {% if strategy == 'local' %}active{% endif %}" 
+                            data-strategy="local">
+                        Local Game
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,357 @@
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h3 class="card-title text-center mb-4">Résoudre le mot du jour</h3>
+
+
+                    <form id="wordForm" class="mb-2">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="wordInput" 
+                                   placeholder="Enter a word" required>
+                            <button class="btn btn-primary" type="submit">
+                                Analyze
+                            </button>
+                            <button class="btn btn-secondary" type="button" id="randomButton">
+                                Random
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div id="loading" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+
+                    <div id="results">
+                        <!-- Results will be prepended here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#wordForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            const word = $('#wordInput').val().trim();
+            if (!word) return;
+
+            $('#loading').show();
+            $('#wordInput').val('');
+
+            $.ajax({
+                url: '/send_word',
+                method: 'POST',
+                data: { word: word },
+                success: function(response) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    let resultHtml;
+                    
+                    if (response.status === 'success') {
+                        let contentHtml;
+                        const result = response.result;
+
+                        if (result.error) {
+                            // Error case
+                            contentHtml = `
+                                <div class="alert alert-warning mb-0">
+                                    ${result.error}
+                                </div>
+                            `;
+                        } else  if (result.percentile) {
+                        // Top 1000 word case
+                        contentHtml = `
+                            <div class="row g-0">  <!-- g-0 removes gutters -->
+                                <div class="col">
+                                    <div class="d-flex justify-content-around small">
+                                        <div class="text-center">
+                                            <span class="text-muted">Percentile: </span>
+                                            <span>${result.percentile}</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-muted">Score: </span>
+                                            <span>${result.score.toFixed(3)}</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <div class="col-7 similar-words-container ps-2" style="display:none; border-left: 1px solid #dee2e6;">
+                                </div>
+                            </div>
+                           `;
+                        } else {
+                            contentHtml = `
+                                <div class="row g-0">
+                                    <div class="col">
+                                        <div class="small">
+                                            <span class="text-muted">Score: </span>
+                                            <span>${result.score.toFixed(3)}</span>
+                                        </div>
+
+                                    </div>
+                                    <div class="col-7 similar-words-container ps-2" style="display:none; border-left: 1px solid #dee2e6;">
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        resultHtml = `
+                            <div class="card mb-1 result-item" style="display: none; ${result.percentile ? `border-color: ${getColorFromPercentile(result.percentile)}; background-color: ${getColorFromPercentile(result.percentile)}22;` : ''}">
+                                <div class="card-body py-1 px-2">  
+                                    <div class="d-flex justify-content-between align-items-center small">
+                                        <span class="fw-bold">"${word}"</span>
+                                        <button class="btn btn-link btn-sm p-0 find-similar mx-2" 
+                                                data-word="${word}" 
+                                                data-score="${result.score}">
+                                            Similar →
+                                        </button>
+                                        <span class="text-muted">${timestamp}</span>
+                                    </div>
+                                    ${contentHtml}
+                                </div>
+                            </div>
+                                `;
+                    } else {
+                        resultHtml = `
+                            <div class="card mb-1 result-item" style="display: none; ${result.percentile ? `border-color: ${getColorFromPercentile(result.percentile)}; background-color: ${getColorFromPercentile(result.percentile)}22;` : ''}">
+                                <div class="card-body py-1 px-2">  
+                                    <div class="d-flex justify-content-between align-items-center small">
+                                        <span class="fw-bold">"${word}"</span>
+                                        <span class="text-muted">${timestamp}</span>
+                                    </div>
+                                    ${contentHtml}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    const $newResult = $(resultHtml);
+                    $('#results').prepend($newResult);
+                    $newResult.slideDown();
+
+                    const $oldResults = $('#results .result-item:gt(9)');
+                    if ($oldResults.length) {
+                        $oldResults.fadeOut(function() {
+                            $(this).remove();
+                        });
+                    }
+                },
+                error: function(xhr) {
+
+                    const timestamp = new Date().toLocaleTimeString();
+                    const errorHtml = `
+                        <div class="card mb-3 border-danger result-item" style="display: none">
+                            <div class="card-header d-flex justify-content-between align-items-center bg-danger text-white">
+                                <span class="fw-bold">"${word}" - Server Error</span>
+                                <small>${timestamp}</small>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-danger mb-0">Failed to process request. Please try again.</p>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const $newError = $(errorHtml);
+                    $('#results').prepend($newError);
+                    $newError.slideDown();
+                },
+                complete: function() {
+                    $('#loading').hide();
+                }                
+            });
+        });
+    });
+
+    $('#randomButton').on('click', function() {
+    $.ajax({
+        url: '/random_word',
+        method: 'GET',
+        success: function(response) {
+            if (response.status === 'success') {
+                $('#wordInput').val(response.word);
+                $('#wordForm').submit();  // Automatically submit the form
+            }
+        },
+        error: function() {
+            // Optional: show error message
+        }
+    });
+});   
+
+$(document).on('click', '.find-similar', function(e) {
+    e.preventDefault();
+    const button = $(this);
+    const container = button.closest('.card').find('.similar-words-container');
+    const word = button.data('word');
+    const score = button.data('score');
+    
+    // Toggle container if already loaded
+    if (container.html() && container.is(':visible')) {
+        container.slideUp();
+        return;
+    }
+    
+    button.prop('disabled', true);
+    
+    $.ajax({
+        url: '/find_similar',
+        method: 'POST',
+        data: {
+            word: word,
+            score: score
+        },
+        success: function(response) {
+            if (response.status === 'success') {
+                const words = response.words;
+                if (words.length === 0) {
+                    container.html('<div class="small text-muted">No similar words found</div>');
+                } else {
+                    const wordsHtml = words
+                        .map(w => `<span class="badge bg-light text-dark me-1 mb-1" style="cursor: pointer;" onclick="$('#wordInput').val('${w}').closest('form').submit()">${w}</span>`)
+                        .join('');
+                    container.html(`
+                        <div class="small">
+                            ${wordsHtml}
+                        </div>
+                    `);
+                }
+                container.slideDown();
+            } else {
+                container.html(
+                    '<div class="small text-danger">Error finding similar words</div>'
+                ).slideDown();
+            }
+        },
+        error: function() {
+            container.html(
+                '<div class="small text-danger">Error finding similar words</div>'
+            ).slideDown();
+        },
+        complete: function() {
+            button.prop('disabled', false);
+        }
+    });
+});
+function getColorFromPercentile(percentile) {
+    if (!percentile) return null; // Handle no percentile case
+    
+    // Normalize percentile to 0-1
+    const normalized = percentile / 1000;
+    
+    // Blue RGB: rgb(0, 0, 255)
+    // Red RGB: rgb(255, 0, 0)
+    // Linear interpolation from blue to red
+    const red = Math.round(255 * normalized);
+    const blue = Math.round(255 * (1 - normalized));
+    
+    return `rgb(${red}, 0, ${blue})`;
+}
+
+$(document).ready(function() {
+    // Strategy switch handler
+    $('.strategy-btn').on('click', function(e) {
+        e.preventDefault();
+        const button = $(this);
+        if (button.hasClass('active')) return;
+        
+        const strategy = button.data('strategy');
+        
+        $.ajax({
+            url: '/switch_strategy',
+            method: 'POST',
+            data: { strategy: strategy },
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Update button states
+                    $('.strategy-btn').removeClass('active');
+                    button.addClass('active');
+                    
+                    // Clear all results
+                    $('#results').empty();
+                    
+                    // Optional: show a toast/message
+                    const strategyName = strategy === 'local' ? 'Local Game' : 'External API';
+                    const alert = $(`
+                        <div class="alert alert-success alert-dismissible fade show py-1 small" role="alert">
+                            Switched to ${strategyName}
+                            <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+                        </div>
+                    `);
+                    $('#results').prepend(alert);
+                    setTimeout(() => alert.alert('close'), 3000);
+                }
+            },
+            error: function() {
+                // Show error message
+                const alert = $(`
+                    <div class="alert alert-danger alert-dismissible fade show py-1 small" role="alert">
+                        Failed to switch strategy
+                        <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                $('#results').prepend(alert);
+                setTimeout(() => alert.alert('close'), 3000);
+            }
+        });
+    });
+});
+
+$(document).ready(function() {
+    // Set initial state based on current page
+    const currentStrategy = '{{ strategy }}';
+    $('.strategy-btn').removeClass('active');
+    $(`.strategy-btn[data-strategy="${currentStrategy}"]`).addClass('active');
+    
+    // Rest of your existing JavaScript...
+});
+
+$(document).ready(function() {
+    // Show/hide new game button based on strategy
+    $('.strategy-btn').on('click', function() {
+        const strategy = $(this).data('strategy');
+        $('#newGameBtn').toggle(strategy === 'local');
+    });
+
+    // New game button handler
+    $('#newGameBtn').on('click', function() {
+        $.ajax({
+            url: '/new_game',
+            method: 'POST',
+            success: function(response) {
+                if (response.status === 'success') {
+                    // Clear results
+                    $('#results').empty();
+                    // Show feedback
+                    const alert = $(`
+                        <div class="alert alert-success alert-dismissible fade show py-1 small" role="alert">
+                            New word generated!
+                            <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+                        </div>
+                    `);
+                    $('#results').prepend(alert);
+                    setTimeout(() => alert.alert('close'), 3000);
+                }
+            }
+        });
+    });
+});
+</script>
+
+<style>
+    pre code {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+</style>
+{% endblock %}
