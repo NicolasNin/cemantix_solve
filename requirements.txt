@@ -1,6 +1,6 @@
 flask
 gensim
 numpy
-sklearn
+scikit-learn
 gunicorn
 git-lfs
