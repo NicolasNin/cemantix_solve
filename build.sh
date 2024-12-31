@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
-git lfs pull
-pip install -r requirements.txt
+curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+sudo apt-get install git-lfs
+git lfs install
+
+# Pull LFS files
+git lfs pullpip install -r requirements.txt
