@@ -7,7 +7,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
     'Accept': '*/*',
     'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3',
-    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Encoding': 'gzip, deflate',
     'Content-Type': 'application/x-www-form-urlencoded',
     'Referer': 'https://cemantix.certitudes.org/',
     'Origin': 'https://cemantix.certitudes.org',
