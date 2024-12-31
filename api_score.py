@@ -24,9 +24,11 @@ def get_score(word):
     }
     response = requests.post(url, headers=headers, data=data)
     print(url, response.status_code)
+    print(response.text)
     if response.status_code == 200:
         try:
             # Let requests handle the decompression automatically
+
             result = response.json()
             return result
         except Exception as e:
