@@ -1,4 +1,3 @@
-import zstandard as zstd
 import io
 import json
 import requests
@@ -8,7 +7,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0',
     'Accept': '*/*',
     'Accept-Language': 'fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3',
-    'Accept-Encoding': 'zstd',
+    'Accept-Encoding': 'gzip, deflate, br',
     'Content-Type': 'application/x-www-form-urlencoded',
     'Referer': 'https://cemantix.certitudes.org/',
     'Origin': 'https://cemantix.certitudes.org',
@@ -24,19 +23,17 @@ def get_score(word):
         'word': word
     }
     response = requests.post(url, headers=headers, data=data)
-
-    # Print response
-    print(url,response.status_code)
+    print(url, response.status_code)
     if response.status_code == 200:
-        dctx = zstd.ZstdDecompressor()
-        with io.BytesIO(response.content) as compressed:
-            with dctx.stream_reader(compressed) as reader:
-                # Read all decompressed data
-                decompressed_data = reader.read()
-        result = json.loads(decompressed_data)
-        return result
+        try:
+            # Let requests handle the decompression automatically
+            result = response.json()
+            return result
+        except Exception as e:
+            print(f"Error decoding response: {e}")
+            return "error"
     else:
-        print("error",response.status_code)
+        print("error", response.status_code)
         return "error"
     
 class ScoreStrategy(ABC):
