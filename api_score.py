@@ -23,20 +23,34 @@ def get_score(word):
         'word': word
     }
     response = requests.post(url, headers=headers, data=data)
-    print(url, response.status_code)
-    print(response.text)
     if response.status_code == 200:
         try:
-            # Let requests handle the decompression automatically
-
-            result = response.json()
-            return result
+            # Debug the raw content
+            print("Raw content bytes:", [x for x in response.content[:20]])  # First 20 bytes
+            print("Content length:", len(response.content))
+            print("response headers",response.headers)
+            # Try different decodings
+            try:
+                # Try UTF-8 with ignore
+                decoded = response.content.decode('utf-8', errors='ignore')
+                print("UTF-8 decoded:", decoded)
+                return json.loads(decoded)
+            except:
+                # Try removing BOM or other prefixes
+                content = response.content
+                if content.startswith(b'\xef\xbb\xbf'):  # UTF-8 BOM
+                    content = content[3:]
+                elif content.startswith(b'\xff\xfe') or content.startswith(b'\xfe\xff'):  # UTF-16 BOM
+                    content = content[2:]
+                
+                print("After BOM removal:", content[:20])
+                return json.loads(content.decode('utf-8', errors='ignore'))
+                
         except Exception as e:
+            print(f"Error type: {type(e)}")
             print(f"Error decoding response: {e}")
             return "error"
-    else:
-        print("error", response.status_code)
-        return "error"
+    return "error"
     
 class ScoreStrategy(ABC):
     @abstractmethod
