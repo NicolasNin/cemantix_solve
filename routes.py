@@ -72,6 +72,8 @@ def new_game():
     try:
         game = current_app.config['GAME']
         game.init_random_word()
+        solver = current_app.config['SOLVER']
+        solver.reset()
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400

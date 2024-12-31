@@ -44,11 +44,15 @@ class Game:
 
     def init_random_word(self):
         self.current_word = random_word(self.model,max_N=self.N_max)
+        print(f"NEW RANDOM WORD {self.current_word}")
         top_similar = self.model.most_similar(self.current_word,topn=999)
+        self.top_similar = {}
         for i,(word,score) in enumerate(top_similar):
             self.top_similar[word]=(1000-i-1,round(score,4))
         return  self.current_word
+    
     def get_score(self,word):
+        print("IN game",self.current_word,word)
         if word == self.current_word:
             return {"score":1,"percentile":1000}
         if word in self.model.key_to_index:
@@ -120,11 +124,12 @@ class Solver:
         return word in self.model.key_to_index
     
     def send_word(self,word):
+        print(self.word_scores)
         if word in self.word_scores:
             return self.word_scores[word]
         if self.check_word(word) :
             score = self.get_score(word)
-            print("azeaz",score)
+            print("get score",word,score)
             if score != "error":
                 self.word_scores[word] = score
                 return score
